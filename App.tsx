@@ -1,118 +1,173 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, { useEffect, useState } from "react";
+import { View, Text, ActivityIndicator } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { createStackNavigator } from "@react-navigation/stack";
+import { createDrawerNavigator } from "@react-navigation/drawer";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./firebaseConfig";
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+// Database Initialization
+import { 
+  createUserTable, 
+  createBookingTable, 
+  createTreatmentTable, 
+  insertMultipleData 
+} from "./database";
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+// Screens
+import FAQScreen from "./screens/FAQScreen";
+import TreatmentScreen from "./screens/TreatmentScreen";
+import TreatmentDetailsScreen from "./screens/TreatmentDetailsScreen";
+import BookingOverviewScreen from "./screens/BookingOverviewScreen";
+import BookingDetailsScreen from "./screens/BookingDetailsScreen";
+import AboutUsScreen from "./screens/AboutUsScreen";
+import UserHomeScreen from "./screens/UserHomeScreen";
+import BookingScreen from "./screens/Booking";
+import LogInScreen from "./screens/LogInScreen";
+import SignUpScreen from "./screens/SignUpScreen";
+import MeetTeamScreen from "./screens/MeetTeamScreen";
+import ProfileScreen from "./screens/ProfileScreen";
+import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
+import LocationContactScreen from "./screens/LocationContactScreen";
+import HomePageScreen from "./screens/HomePageScreen";
+import HomeScreen from "./screens/HomeScreen";
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+const Stack = createStackNavigator();
+const Drawer = createDrawerNavigator();
+const Tab = createBottomTabNavigator();
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+const ViewBookingStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="BookingOverview" component={BookingOverviewScreen} />
+    <Stack.Screen name="BookingDetails" component={BookingDetailsScreen} />
+  </Stack.Navigator>
+);
+
+const TreatmentStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="TreatmentScreen" component={TreatmentScreen} />
+    <Stack.Screen name="makeBooking" component={BookingScreen} />
+    <Stack.Screen name="TreatmentDetails" component={TreatmentDetailsScreen} />
+  </Stack.Navigator>
+);
+
+const TeamInfoStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="TeamInfoScreen" component={HomeScreen} />
+    <Stack.Screen name="AboutUs" component={AboutUsScreen} />
+    <Stack.Screen name="MeetTeam" component={MeetTeamScreen} />
+    <Stack.Screen name="FAQ" component={FAQScreen} />
+    <Stack.Screen name="Location" component={LocationContactScreen} />
+  </Stack.Navigator>
+);
+
+const HomeStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="UserHome">
+    <Stack.Screen name="UserHome" component={UserHomeScreen} />
+    <Stack.Screen name="Login" component={LogInScreen} />
+    <Stack.Screen name="Signup" component={SignUpScreen} />
+    <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+    <Stack.Screen name="Profile" component={ProfileScreen} />
+  </Stack.Navigator>
+);
+
+const BottomTabNavigator = () => (
+  <Tab.Navigator
+    initialRouteName="HomePage"
+    screenOptions={({ route }) => ({
+      tabBarIcon: ({ focused, color, size }) => {
+        const icons = {
+          HomePage: "home-outline",
+          Profile: "person-outline",
+          Treatment: "face-woman-shimmer",
+          Bookings: "calendar-outline",
+        };
+
+        if (route.name === "Treatment") {
+          return (
+            <MaterialCommunityIcons
+              name={icons[route.name]}
+              size={size}
+              color={color}
+            />
+          );
+        }
+
+        return (
+          <Ionicons
+            name={focused ? icons[route.name].replace("-outline", "") : icons[route.name]}
+            size={size}
+            color={color}
+          />
+        );
+      },
+      tabBarActiveTintColor: "#4CAF50",
+      tabBarInactiveTintColor: "gray",
+      headerShown: false,
+    })}
+  >
+    <Tab.Screen name="Profile" component={ProfileScreen} />
+    <Tab.Screen name="HomePage" component={HomePageScreen} />
+    <Tab.Screen name="Treatment" component={TreatmentStack} />
+    <Tab.Screen name="Bookings" component={ViewBookingStack} />
+  </Tab.Navigator>
+);
+
+const App = () => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const initializeDatabase = async () => {
+      await createUserTable();
+      await createBookingTable();
+      await createTreatmentTable();
+      await insertMultipleData(); 
+    };
+    initializeDatabase();
+
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+        <Text style={{ marginTop: 10 }}>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
+    <NavigationContainer>
+      {user ? (
+        <Drawer.Navigator
+          initialRouteName="Home"
+          screenOptions={{
+            drawerActiveTintColor: "darkslateblue",
+            drawerActiveBackgroundColor: "pink",
+            drawerLabelStyle: { fontSize: 23, color: "#333333" },
+          }}
+        >
+          <Drawer.Screen name="Home" component={BottomTabNavigator} />
+          <Drawer.Screen name="Profile" component={ProfileScreen} />
+          <Drawer.Screen name="Treatment" component={TreatmentStack} />
+          <Drawer.Screen name="Bookings" component={ViewBookingStack} />
+          <Drawer.Screen name="About Us" component={TeamInfoStack} />
+        </Drawer.Navigator>
+      ) : (
+        <HomeStack />
+      )}
+    </NavigationContainer>
   );
-}
-
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
-
-  return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
+};
 
 export default App;
